@@ -8,3 +8,11 @@ pub fn run() -> std::io::Result<()> {
     draw_ipso_ascii();
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn tests_works() {
+        assert_eq!(true, true);
+    }
+}
