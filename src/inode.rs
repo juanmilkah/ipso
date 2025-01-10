@@ -1,6 +1,11 @@
-use std::io::Result;
+use std::fs::File;
+use std::io::{Read, Result, Seek, SeekFrom, Write};
 
-#[derive(Default)]
+use serde::{Deserialize, Serialize};
+
+use crate::superblock::bincode_err_to_io_err;
+
+#[derive(Default, Serialize, Deserialize)]
 pub struct Inode {
     pub identifier: u32,    /*inode number*/
     pub mode: u32,          /*can this file be read/written/executed*/
@@ -17,7 +22,7 @@ pub struct Inode {
     pub lcount: u32,        /*direct links count*/
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub enum FileType {
     #[default]
     RegularFile,
@@ -42,11 +47,24 @@ impl Inode {
         self.identifier = id;
     }
 
-    pub fn read_from_disk(&self) -> &[u8] {
-        &[]
+    pub fn read_from_disk(&self, path: &str, offset: u64) -> Result<Self> {
+        let mut file = File::open(path)?;
+        file.seek(SeekFrom::Start(offset))?;
+
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer)?;
+
+        let inode = bincode::deserialize(&buffer).map_err(bincode_err_to_io_err)?;
+        Ok(inode)
     }
 
-    pub fn write_to_disk(&mut self, _data: &[u8]) -> Result<()> {
+    pub fn write_to_disk(&mut self, path: &str, offset: u64) -> Result<()> {
+        let mut file = File::open(path)?;
+        file.seek(SeekFrom::Start(offset))?;
+
+        let buffer = bincode::serialize(self).map_err(bincode_err_to_io_err)?;
+
+        file.write_all(&buffer)?;
         Ok(())
     }
 
