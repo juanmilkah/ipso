@@ -1,5 +1,6 @@
 use self::ipso_ascii::draw_ipso_ascii;
 
+pub mod bitmaps;
 pub mod inode;
 pub mod ipso_ascii;
 pub mod superblock;
