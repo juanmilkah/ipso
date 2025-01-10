@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::superblock::bincode_err_to_io_err;
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Inode {
     pub identifier: u32,    /*inode number*/
     pub mode: u32,          /*can this file be read/written/executed*/
@@ -22,7 +22,7 @@ pub struct Inode {
     pub lcount: u32,        /*direct links count*/
 }
 
-#[derive(Default, Clone, Serialize, Deserialize)]
+#[derive(Default, Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub enum FileType {
     #[default]
     RegularFile,
@@ -59,7 +59,7 @@ impl Inode {
     }
 
     pub fn write_to_disk(&mut self, path: &str, offset: u64) -> Result<()> {
-        let mut file = File::open(path)?;
+        let mut file = File::create(path)?;
         file.seek(SeekFrom::Start(offset))?;
 
         let buffer = bincode::serialize(self).map_err(bincode_err_to_io_err)?;
@@ -172,5 +172,32 @@ impl Inode {
 
     pub fn set_deletion_time(&mut self, time: u64) {
         self.dtime = time;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use tempfile::tempdir;
+
+    use super::*;
+
+    #[test]
+    fn inode_tests_work() {
+        assert_eq!(true, true);
+    }
+
+    #[test]
+    fn loading_inode() {
+        let dir = tempdir().unwrap();
+        let filepath = dir.path().join("inode.bin");
+        let filepath = filepath.to_string_lossy().to_string();
+
+        let mut inode = Inode::new();
+
+        inode.write_to_disk(&filepath, 0).unwrap();
+
+        let loaded = inode.read_from_disk(&filepath, 0).unwrap();
+
+        assert_eq!(inode, loaded);
     }
 }

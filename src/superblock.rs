@@ -3,7 +3,7 @@ use std::io::{self, Read, Result, Seek, SeekFrom, Write};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Superblock {
     pub version: u32, /*filesystem version*/
     pub magic: u32,   /*to identify the filesystem*/
@@ -33,7 +33,7 @@ impl Superblock {
     }
 
     pub fn write_to_disk(&mut self, path: &str, offset: u64) -> Result<()> {
-        let mut file = File::open(path)?;
+        let mut file = File::create(path)?;
         file.seek(SeekFrom::Start(offset))?;
 
         let buffer = bincode::serialize(self).map_err(bincode_err_to_io_err)?;
@@ -100,8 +100,57 @@ impl Superblock {
     pub fn set_root_inode(&mut self, inode: u32) {
         self.rinode = inode;
     }
+
+    pub fn get_version(&self) -> u32 {
+        self.version
+    }
+
+    pub fn set_version(&mut self, version: u32) {
+        self.version = version;
+    }
+
+    pub fn get_magic(&self) -> u32 {
+        self.magic
+    }
+
+    pub fn set_magic(&mut self, magic: u32) {
+        self.magic = magic;
+    }
 }
 
 pub fn bincode_err_to_io_err(err: bincode::Error) -> io::Error {
     io::Error::new(io::ErrorKind::Other, err)
+}
+
+#[cfg(test)]
+mod tests {
+
+    use tempfile::tempdir;
+
+    use super::*;
+
+    #[test]
+    fn superblock_tests_work() {
+        assert_eq!(true, true);
+    }
+
+    #[test]
+    fn loading_superblock() {
+        let dir = tempdir().expect("Failed to create temp dir");
+        let filepath = dir.path().join("superblock.bin");
+        let filepath = filepath.to_string_lossy().to_string();
+        File::create_new(&filepath).unwrap();
+
+        let mut sp = Superblock::new();
+        sp.set_version(1);
+        sp.set_magic(0xDEADBEEF);
+
+        sp.write_to_disk(&filepath, 0).unwrap();
+
+        let loaded = sp.read_from_disk(&filepath, 0).unwrap();
+
+        assert_eq!(sp, loaded);
+        assert_eq!(loaded.version, 1);
+        assert_eq!(loaded.magic, 0xDEADBEEF);
+    }
 }
